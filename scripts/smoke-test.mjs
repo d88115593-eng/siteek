@@ -27,7 +27,9 @@ if(process.env.RUN_INTEGRATION_TESTS==='1'){
   const quote=await posted.json();
   if(!/^PC-\d+$/.test(quote.reference))throw new Error('Estimate response is missing its reference.');
   console.log('PASS quote submission',quote.reference);
-  const login=await fetch(origin+'/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:process.env.ADMIN_USERNAME||'admin',password:process.env.ADMIN_PASSWORD})});
+  const rejectedEmailLogin=await fetch(origin+'/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'admin@example.org',password:process.env.ADMIN_PASSWORD})});
+  if(rejectedEmailLogin.status!==401)throw new Error('Email login must remain unavailable.');
+  const login=await fetch(origin+'/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:process.env.ADMIN_USERNAME||'eike',password:process.env.ADMIN_PASSWORD})});
   if(!login.ok)throw new Error(`Test administrator could not sign in: ${login.status}`);
   const sess=await login.json();
   const cookie=login.headers.get('set-cookie')?.split(';')[0];
@@ -39,7 +41,7 @@ if(process.env.RUN_INTEGRATION_TESTS==='1'){
   if(!lead||lead.preferred_contact!=='sms')throw new Error('Submitted SMS-first lead was not visible in admin.');
   const update=await fetch(origin+`/api/admin/leads/${lead.id}`,{method:'PUT',headers:{'content-type':'application/json',cookie,'x-csrf-token':sess.csrfToken},body:JSON.stringify({status:'Contacted',internal_notes:'Reviewed by integration test.',scheduled_for:''})});
   if(!update.ok)throw new Error(`Could not update lead: ${update.status}`);
-  if(sess.username!==(process.env.ADMIN_USERNAME||'admin').toLowerCase())throw new Error('Login did not return a username.');
+  if(sess.username!==(process.env.ADMIN_USERNAME||'eike').toLowerCase())throw new Error('Login did not return a username.');
   if(!data.admin?.username)throw new Error('Admin bootstrap missing username.');
   console.log('PASS username/password login, private dashboard, SMS lead and status update');
   const demo=new FormData();const fakeMp4=new Uint8Array([0,0,0,16,102,116,121,112,105,115,111,109,0,0,0,0,0,0,0,0]);

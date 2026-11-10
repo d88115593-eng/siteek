@@ -35,7 +35,7 @@ It **cannot** work as a complete admin-enabled site on static-only hosts (like G
 
 1. Install **Node.js 22** (or at least Node 20).
 2. Copy `.env.example` to `.env`.
-3. Set your own `ADMIN_EMAIL`, a long `ADMIN_PASSWORD` (at least 12 characters), and a random `SESSION_SECRET` (at least 32 characters).
+3. Set your own `ADMIN_USERNAME` (or use the default `admin`), a long `ADMIN_PASSWORD` (at least 12 characters), and a random `SESSION_SECRET` (at least 32 characters).
 4. Keep `NODE_ENV=development` when running locally over HTTP.
 5. Install dependencies and run:
 
@@ -48,7 +48,7 @@ Open **http://localhost:5173** for the website and **http://localhost:5173/admin
 
 The API runs on port 3001. Vite proxies `/api` and `/uploads` to the backend. Once the server starts, you can run `npm run smoke` to check public endpoints and access control.
 
-The **first admin account is created only once**, during the first server startup, from `ADMIN_EMAIL` / `ADMIN_PASSWORD`. After that, update credentials from **Account & Security** in the Admin dashboard. Changes to the initial `.env` admin values will not overwrite an existing account.
+The **first admin account is created only once**, during the first server startup, from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. After that, update credentials from **Account & Security** in the Admin dashboard. Changes to the initial `.env` admin values will not overwrite an existing account.
 
 ## Production deployment with Docker (recommended)
 
@@ -77,7 +77,7 @@ npm run build
 NODE_ENV=production npm start
 ```
 
-Set `PORT`, `SITE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` and a writable persistent `DATA_DIR` in your hosting provider's environment settings. On Windows, set environment variables in the host settings instead of using the Unix-style command prefix.
+Set `PORT`, `SITE_URL`, `SESSION_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD` and a writable persistent `DATA_DIR` in your hosting provider's environment settings. On Windows, set environment variables in the host settings instead of using the Unix-style command prefix.
 
 ## Recommended .env production settings
 
@@ -87,7 +87,7 @@ Set `PORT`, `SITE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` and a 
 | `NODE_ENV` | `production` in public hosting |
 | `SITE_URL` | Public `https://…` URL for sitemap and metadata |
 | `SESSION_SECRET` | Random secret, 32+ characters |
-| `ADMIN_EMAIL` | Initial admin email (used only if the database has no admins) |
+| `ADMIN_USERNAME` | Initial admin username (used only if the database has no admins) |
 | `ADMIN_PASSWORD` | Initial admin password, 12+ characters |
 | `DATA_DIR` | Persistent location for the SQLite DB and uploads, default `./data` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | Optional SMTP mail server |
@@ -111,7 +111,7 @@ Submitted quote requests are **always recorded in the dashboard**, even if SMTP 
 - **Appointments:** calendar view of scheduled requests
 - **Media Library:** review uploads, copy URLs, remove unused images
 - **Team Access:** owner can add/edit access to team accounts
-- **Account & Security:** change your own admin email/password
+- **Account & Security:** change your own admin username/password
 
 ### Initial business information
 
@@ -162,3 +162,18 @@ This project was prepared for the owner of Prime Carpet & Home Care. Brand asset
 - **SMS is the primary customer action**. The floating WhatsApp shortcut appears if a WhatsApp number is filled in **Admin → Contact & SEO**. Confirm that `4074566059` supports WhatsApp before publishing. Remove the number to hide the icon.
 - Six source work videos were supplied and prepared as compressed MP4 clips in the separate downloadable project bundle. They **are not yet part of the GitHub source-only checkout**; after deployment, upload each via **Admin → Job Videos**, or copy files to `public/assets/` before building. Until present, their website cards are hidden.
 - No public service price is inferred from the footage. Configure prices or offers in the admin only after confirming US-dollar pricing with the business owner.
+
+### Admin sign-in and upgrades
+
+- Use **Username + Password**, never email, at `/admin`.
+- First install: set `ADMIN_USERNAME` (defaults to `admin`) and secret `ADMIN_PASSWORD` of 12+ characters. Do not commit passwords to this repository.
+- When upgrading from the older email-login version, the SQLite DB automatically preserves existing administrator IDs and bcrypt password hashes while migrating to usernames; the first owner gets `admin`. After logging in, use **Account & Security** to change the username or password.
+- Team accounts also use usernames without email.
+
+### Real Results, videos and WhatsApp
+
+The before-and-after examples are centered. Real job videos (if uploaded) display directly below. The new quick form collects name, callback number, ZIP, selected service and project description and opens a prefilled WhatsApp message (SMS alternative). The visitor must press Send in their messaging app; the quick form does **not** store requests in the website database. For a lead that appears in the ADM, use the full website estimate form.
+
+### Original Prime logo in browser and Google
+
+The admin's **Website & Branding** panel contains an editable favicon and social preview image. The backend serves `/favicon.png` (96×96 PNG from the unchanged original logo) and `/social-preview.jpg` (1200×630 sharing canvas). Google decides when a favicon appears in search results, after indexing the production HTTPS domain.

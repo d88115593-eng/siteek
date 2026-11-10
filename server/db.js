@@ -47,14 +47,14 @@ CREATE TABLE IF NOT EXISTS admins (
 `);
 
 // Migrate older email-based admins in place, preserving IDs, bcrypt hashes and sessions.
-// The first owner becomes "admin"; team accounts receive unique username slugs.
+// The first owner becomes "eike"; team accounts receive unique username slugs.
 const oldAdminColumns = db.pragma('table_info(admins)');
 if (!oldAdminColumns.some(c => c.name === 'role')) db.exec("ALTER TABLE admins ADD COLUMN role TEXT NOT NULL DEFAULT 'owner'");
 if (!db.pragma('table_info(admins)').some(c => c.name === 'username')) {
   const legacyAdmins=db.prepare('SELECT * FROM admins ORDER BY id').all();
   const used=new Set();
   const names=legacyAdmins.map((account,index)=>{
-    let base=(account.role==='owner' && !used.has('admin'))?'admin':String(account.email||'user'+account.id).split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,32);
+    let base=(account.role==='owner' && !used.has('eike'))?'eike':String(account.email||'user'+account.id).split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,32);
     if(base.length<3)base='user'+account.id;
     let name=base, n=2;
     while(used.has(name))name=(base.slice(0,28)+'-'+n++).slice(0,32);
@@ -87,12 +87,19 @@ for (const [type, items] of Object.entries(defaultItems)) {
   }
 }
 const numAdmins=db.prepare('SELECT COUNT(*) count FROM admins').get().count;
-const initialUsername=String(process.env.ADMIN_USERNAME||'admin').trim().toLowerCase();
+// Upgrade the previous default owner login in place, without changing the password hash.
+const oldDefaultOwner=db.prepare("SELECT id FROM admins WHERE username='admin' COLLATE NOCASE AND role='owner' ORDER BY id LIMIT 1").get();
+const newOwnerExists=db.prepare("SELECT id FROM admins WHERE username='eike' COLLATE NOCASE").get();
+if(oldDefaultOwner && !newOwnerExists){
+  db.prepare("UPDATE admins SET username='eike' WHERE id=?").run(oldDefaultOwner.id);
+  console.info('[setup] Primary owner username updated to eike; existing password retained.');
+}
+const initialUsername=String(process.env.ADMIN_USERNAME||'eike').trim().toLowerCase();
 if(!numAdmins && /^[a-z0-9._-]{3,32}$/.test(initialUsername) && process.env.ADMIN_PASSWORD?.length>=12){
   db.prepare('INSERT INTO admins(username,password_hash) VALUES(?,?)').run(initialUsername,bcrypt.hashSync(process.env.ADMIN_PASSWORD,12));
   console.info('[setup] Initial administrator created with a username; change the password after your first sign-in.');
 }else if(!numAdmins){
-  console.warn('[setup] Admin unavailable: configure ADMIN_USERNAME (or default admin) and ADMIN_PASSWORD (12+ characters) in private environment settings.');
+  console.warn('[setup] Admin unavailable: configure ADMIN_USERNAME (or default eike) and ADMIN_PASSWORD (12+ characters) in private environment settings.');
 }
 
 export function getSite() {

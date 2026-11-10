@@ -39,14 +39,41 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS ix_leads_status ON leads(status,created_at);
 CREATE TABLE IF NOT EXISTS admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT NOT NULL UNIQUE,
+  username TEXT NOT NULL COLLATE NOCASE UNIQUE,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'owner',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 `);
 
-if (!db.pragma('table_info(admins)').some(c=>c.name==='role')) db.exec("ALTER TABLE admins ADD COLUMN role TEXT NOT NULL DEFAULT 'owner'");
+// Migrate older email-based admins in place, preserving IDs, bcrypt hashes and sessions.
+// The first owner becomes "admin"; team accounts receive unique username slugs.
+const oldAdminColumns = db.pragma('table_info(admins)');
+if (!oldAdminColumns.some(c => c.name === 'role')) db.exec("ALTER TABLE admins ADD COLUMN role TEXT NOT NULL DEFAULT 'owner'");
+if (!db.pragma('table_info(admins)').some(c => c.name === 'username')) {
+  const legacyAdmins=db.prepare('SELECT * FROM admins ORDER BY id').all();
+  const used=new Set();
+  const names=legacyAdmins.map((account,index)=>{
+    let base=(account.role==='owner' && !used.has('admin'))?'admin':String(account.email||'user'+account.id).split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,32);
+    if(base.length<3)base='user'+account.id;
+    let name=base, n=2;
+    while(used.has(name))name=(base.slice(0,28)+'-'+n++).slice(0,32);
+    used.add(name); return name;
+  });
+  db.transaction(()=>{
+    db.exec(`CREATE TABLE admins_upgrade (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'owner',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
+    const insert=db.prepare('INSERT INTO admins_upgrade(id,username,password_hash,role,created_at) VALUES(?,?,?,?,?)');
+    legacyAdmins.forEach((a,i)=>insert.run(a.id,names[i],a.password_hash,a.role,a.created_at));
+    db.exec('DROP TABLE admins; ALTER TABLE admins_upgrade RENAME TO admins;');
+  })();
+  console.info('[setup] Email-based administrator accounts migrated to username sign-in. Password hashes preserved.');
+}
 
 if (!db.prepare('SELECT key FROM settings WHERE key = ?').get('site')) {
   db.prepare('INSERT INTO settings(key,data) VALUES(?,?)').run('site', JSON.stringify(defaultSettings));
@@ -59,12 +86,13 @@ for (const [type, items] of Object.entries(defaultItems)) {
     transaction();
   }
 }
-const numAdmins = db.prepare('SELECT COUNT(*) count FROM admins').get().count;
-if (!numAdmins && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length >= 12) {
-  db.prepare('INSERT INTO admins(email,password_hash) VALUES(?,?)').run(process.env.ADMIN_EMAIL.trim().toLowerCase(), bcrypt.hashSync(process.env.ADMIN_PASSWORD, 12));
-  console.info('[setup] Initial administrator created. Change the password in the dashboard after login.');
-} else if (!numAdmins) {
-  console.warn('[setup] Admin unavailable: set ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters) before starting.');
+const numAdmins=db.prepare('SELECT COUNT(*) count FROM admins').get().count;
+const initialUsername=String(process.env.ADMIN_USERNAME||'admin').trim().toLowerCase();
+if(!numAdmins && /^[a-z0-9._-]{3,32}$/.test(initialUsername) && process.env.ADMIN_PASSWORD?.length>=12){
+  db.prepare('INSERT INTO admins(username,password_hash) VALUES(?,?)').run(initialUsername,bcrypt.hashSync(process.env.ADMIN_PASSWORD,12));
+  console.info('[setup] Initial administrator created with a username; change the password after your first sign-in.');
+}else if(!numAdmins){
+  console.warn('[setup] Admin unavailable: configure ADMIN_USERNAME (or default admin) and ADMIN_PASSWORD (12+ characters) in private environment settings.');
 }
 
 export function getSite() {

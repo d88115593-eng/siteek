@@ -1,4 +1,4 @@
-name: Build and source checks
+name: Build and smoke tests
 on:
   push:
     branches: [main]
@@ -12,7 +12,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install
+      - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Verify syntax and build
         run: npm run check
+      - name: Test live backend, leads and admin authentication
+        env:
+          ADMIN_EMAIL: test-admin@example.invalid
+          ADMIN_PASSWORD: ci-test-admin-password-very-long-123
+          SESSION_SECRET: ci-session-secret-very-long-and-random-local-test-value
+          DATA_DIR: ${{ runner.temp }}/prime-smoke-data
+          PORT: '3001'
+        run: |
+          set -e
+          node server/index.js > /tmp/prime-smoke.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3001/api/health > /dev/null; then break; fi
+            sleep 1
+          done
+          RUN_INTEGRATION_TESTS=1 npm run smoke

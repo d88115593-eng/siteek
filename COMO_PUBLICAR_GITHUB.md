@@ -18,7 +18,7 @@ cp .env.example .env
 3. Edite o arquivo `.env` no servidor, preenchendo, no mínimo:
 
 - `SITE_URL` — domínio HTTPS real, por exemplo `https://seu-dominio.com`.
-- `ADMIN_EMAIL` — e-mail de login do dono.
+- `ADMIN_USERNAME` — nome de usuário do administrador (exemplo: `admin`).
 - `ADMIN_PASSWORD` — senha exclusiva e forte (pelo menos 12 caracteres).
 - `SESSION_SECRET` — sequência longa e aleatória com pelo menos 32 caracteres.
 - `NOTIFY_EMAIL`, `SMTP_*` e `FROM_EMAIL` — opcionais para notificações de novos orçamentos por e-mail.
@@ -38,7 +38,7 @@ docker compose up -d --build
 - Website: `https://seu-dominio.com/`
 - Administrativo: `https://seu-dominio.com/admin`
 
-A primeira conta é criada no primeiro início usando `ADMIN_EMAIL` / `ADMIN_PASSWORD` do ambiente do servidor. Troque a senha no próprio ADM, se necessário. Nunca coloque credenciais no repositório público.
+A primeira conta é criada no primeiro início usando `ADMIN_USERNAME` / `ADMIN_PASSWORD` do ambiente do servidor. Troque a senha no próprio ADM, se necessário. Nunca coloque credenciais no repositório público.
 
 ## SMS — prioridade em Orlando
 
@@ -60,3 +60,16 @@ No ADM, atualize cores, textos, logo, fotografias reais, serviços gerais, galer
 - Consulte os testes no GitHub em **Actions > Build and smoke tests**.
 
 Para detalhes técnicos adicionais, veja o `README.md` na raiz do repositório.
+## Login por usuário e senha (sem e-mail)
+
+A página `/admin` possui campos **Username** e **Password**, sem e-mail. O usuário inicial é lido de `ADMIN_USERNAME` e a senha de `ADMIN_PASSWORD` somente na primeira inicialização com banco vazio. O padrão do nome é `admin` caso `ADMIN_USERNAME` esteja ausente.
+
+Instalações antigas com logins por e-mail são migradas automaticamente: o primeiro proprietário passa a usar **admin**, a senha criptografada é preservada e o acesso aos dados não é perdido. Outros usuários recebem usernames distintos. **Não publique senhas em repositórios GitHub públicos.**
+
+## Ícone no Google e prévia de compartilhamento
+
+No ADM, em **Website & Branding**, configure a logo, o ícone **Google & browser tab icon** e a imagem de compartilhamento. A logo original é a opção inicial. O backend disponibiliza `/favicon.png` e `/social-preview.jpg`, usados no HTML do site. Depois de configurar seu domínio e publicar, o Google poderá atualizar o favicon no próximo rastreamento; a atualização nos resultados não é imediata.
+
+## Vídeos e orçamento via WhatsApp
+
+A seção **Real Results** centraliza as comparações antes/depois. Logo abaixo aparecem os vídeos reais disponíveis e um formulário breve que prepara uma mensagem de orçamento por WhatsApp ou SMS. **A mensagem só é enviada quando o visitante confirma o envio no aplicativo.** Esse formulário rápido não armazena um contato no ADM; para registrar leads, o visitante deve utilizar o formulário completo **Get your free estimate**.

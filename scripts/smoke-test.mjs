@@ -35,5 +35,21 @@ if(process.env.RUN_INTEGRATION_TESTS==='1'){
   const update=await fetch(origin+`/api/admin/leads/${lead.id}`,{method:'PUT',headers:{'content-type':'application/json',cookie,'x-csrf-token':sess.csrfToken},body:JSON.stringify({status:'Contacted',internal_notes:'Reviewed by integration test.',scheduled_for:''})});
   if(!update.ok)throw new Error(`Could not update lead: ${update.status}`);
   console.log('PASS login, private dashboard, SMS lead and status update');
+  const demo=new FormData();const fakeMp4=new Uint8Array([0,0,0,16,102,116,121,112,105,115,111,109,0,0,0,0,0,0,0,0]);
+  demo.append('video',new Blob([fakeMp4],{type:'video/mp4'}),'test.mp4');
+  const uploaded=await fetch(origin+'/api/admin/upload-video',{method:'POST',headers:{cookie,'x-csrf-token':sess.csrfToken},body:demo});
+  if(uploaded.status!==201)throw new Error(`Video upload failed: ${uploaded.status} ${await uploaded.text()}`);
+  const media=await uploaded.json();
+  if(!/^\/uploads\/[a-f0-9-]{36}\.mp4$/.test(media.url))throw new Error('Video upload path was not generated.');
+  const served=await fetch(origin+media.url);
+  if(!served.ok||!String(served.headers.get('content-type')).includes('video/mp4'))throw new Error('Video not served as MP4.');
+  const created=await fetch(origin+'/api/admin/items/videos',{method:'POST',headers:{'content-type':'application/json',cookie,'x-csrf-token':sess.csrfToken},body:JSON.stringify({title:'CI Work Video',video:media.url})});
+  if(created.status!==201)throw new Error('Could not create a video card in admin.');
+  const publicVideos=await (await fetch(origin+'/api/public')).json();
+  if(!publicVideos.videos.some(v=>v.title==='CI Work Video'))throw new Error('Uploaded video missing from public site.');
+  const id=(await created.json()).id;
+  await fetch(origin+`/api/admin/items/videos/${id}`,{method:'DELETE',headers:{cookie,'x-csrf-token':sess.csrfToken}});
+  await fetch(origin+'/api/admin/uploads/'+media.url.split('/').at(-1),{method:'DELETE',headers:{cookie,'x-csrf-token':sess.csrfToken}});
+  console.log('PASS secured video upload, streaming, and editable portfolio');
 }
 console.log('All smoke tests passed.');

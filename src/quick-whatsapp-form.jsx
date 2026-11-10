@@ -23,15 +23,16 @@ export default function WhatsAppQuickQuote({phone,smsPhone}){
   ].join('\n');
   function submit(e,channel){
     e.preventDefault();
-    if(!e.currentTarget.reportValidity())return;
+    const form=e.currentTarget.form||e.currentTarget;
+    if(!form.reportValidity())return;
     const msg=encodeURIComponent(buildMessage());
     const target=channel==='whatsapp'
       ?'https://wa.me/'+usNumber(phone)+'?text='+msg
       :'sms:+'+usNumber(smsPhone)+'?body='+msg;
     // One deliberate user action, no background messages or storage.
     if(channel==='whatsapp'){
-      const tab=window.open(target,'_blank','noopener,noreferrer');
-      if(!tab)window.location.assign(target);
+      const tab=window.open(target,'_blank');
+      if(tab)tab.opener=null;else window.location.assign(target);
     }else window.location.assign(target);
   }
   return <section className="quick-wa-section" aria-labelledby="quick-wa-heading"><div className="container quick-wa-layout">

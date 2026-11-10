@@ -73,3 +73,15 @@ No ADM, em **Website & Branding**, configure a logo, o ícone **Google & browser
 ## Vídeos e orçamento via WhatsApp
 
 A seção **Real Results** centraliza as comparações antes/depois. Logo abaixo aparecem os vídeos reais disponíveis e um formulário breve que prepara uma mensagem de orçamento por WhatsApp ou SMS. **A mensagem só é enviada quando o visitante confirma o envio no aplicativo.** Esse formulário rápido não armazena um contato no ADM; para registrar leads, o visitante deve utilizar o formulário completo **Get your free estimate**.
+
+## Configuração segura do administrador principal eike
+
+O login inicial do proprietário é `eike`. A senha **não está no GitHub**, pois este repositório é público.
+
+- No painel de hospedagem, configure a variável privada `ADMIN_USERNAME=eike`.
+- Configure `ADMIN_PASSWORD` com uma senha exclusiva de 12 ou mais caracteres **diretamente nas variáveis privadas da hospedagem** (não no código, script enviado à IA, README ou GitHub).
+- Instalação nova: a conta é criada na primeira execução do backend com essas variáveis.
+- Banco já existente: a migração altera o nome antigo `admin` para `eike` e preserva a senha existente. Para configurar/trocar a senha sem acesso ao painel, execute `npm run admin:setup` no servidor com as variáveis privadas carregadas.
+- Depois, acesse `https://seu-dominio.com/admin` e use somente **Username** e **Password**. No ADM, **Account & Security** muda suas credenciais e **Team Access** cria outros usuários e senhas.
+- Se aparecer um formulário de e-mail fornecido pelo Lovable/Base44, ajuste o roteamento/autenticação nessa plataforma; **não é a tela do login deste código**, e a atualização do GitHub por si só não substitui a autenticação nativa da plataforma.
+- Como uma senha foi compartilhada nesta conversa, recomenda-se definir uma **senha nova** diretamente no servidor antes de colocar o site no ar.

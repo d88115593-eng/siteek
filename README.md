@@ -155,3 +155,10 @@ This project was prepared for the owner of Prime Carpet & Home Care. Brand asset
 - The online estimate form stores requests securely in the admin dashboard; no SMS messages are sent automatically without an additional SMS provider.
 - The response-time caption is editable and indicates a typical time, **not** a guaranteed SLA.
 - Do not publish unverified service-area cities or ZIP codes. Orlando is the primary listed market; confirm each suburb and range with the owner.
+
+## Job videos and SMS / WhatsApp for Orlando
+
+- The **Job Videos** admin section can upload MP4/WebM files (40 MB limit per file, possibly lower at your hosting proxy), edit descriptions, choose cover photos, reorder and hide videos. Uploaded media lives in the **persistent** `DATA_DIR/uploads/public` folder.
+- **SMS is the primary customer action**. The floating WhatsApp shortcut appears if a WhatsApp number is filled in **Admin → Contact & SEO**. Confirm that `4074566059` supports WhatsApp before publishing. Remove the number to hide the icon.
+- Six source work videos were supplied and prepared as compressed MP4 clips in the separate downloadable project bundle. They **are not yet part of the GitHub source-only checkout**; after deployment, upload each via **Admin → Job Videos**, or copy files to `public/assets/` before building. Until present, their website cards are hidden.
+- No public service price is inferred from the footage. Configure prices or offers in the admin only after confirming US-dollar pricing with the business owner.

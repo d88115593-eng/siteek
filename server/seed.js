@@ -37,7 +37,7 @@ export const defaultSettings = {
   serviceRegion: 'Orlando and surrounding areas',
   streetAddress: '',
   phone: '4074566059',
-  whatsapp: '',
+  whatsapp: '4074566059', // Verify this is registered with WhatsApp before launch.
   email: '',
   instagram: 'https://www.instagram.com/primecarpethome/',
   facebook: '',
@@ -55,6 +55,8 @@ export const defaultSettings = {
   servicesSubtitle: 'Thoughtful cleaning and home services tailored to your needs.',
   galleryTitle: 'The difference is in the details.',
   gallerySubtitle: 'A look at our work. Real progress, one space at a time.',
+  videosTitle: 'See our team at work.',
+  videosSubtitle: 'Real footage of carpet, sofa, car seat and upholstery cleaning. Press play to see the process.'
   aboutTitle: 'Your home is in good hands.',
   aboutText: 'Prime Carpet & Home Care is focused on treating every space with care and attention to detail. From deep upholstery cleaning to general home service requests, we listen first and help you find the right solution.',
   aboutPhoto: '/assets/prime-chair-before-after.webp',
@@ -73,6 +75,7 @@ export const defaultSettings = {
   sections: [
     { id: 'services', label: 'Services', enabled: true },
     { id: 'gallery', label: 'Before & After', enabled: true },
+    { id: 'videos', label: 'Work Videos', enabled: true },
     { id: 'about', label: 'About', enabled: true },
     { id: 'extra', label: 'Other Services', enabled: true },
     { id: 'reviews', label: 'Reviews', enabled: true },
@@ -93,6 +96,14 @@ export const defaultItems = {
   ],
   gallery: [
     { title: 'Dining chair upholstery refresh', description: 'Upholstery cleaning example shared by Prime Carpet & Home Care.', before: '/assets/chair-before.webp', after: '/assets/chair-after.webp', tag: 'Upholstery Cleaning' }
+  ],
+  videos: [
+    { title: 'Residential Carpet Cleaning', description: 'A closer look at a carpet cleaning project.', video: '/assets/work-carpet-room.mp4', poster: '/assets/work-carpet-room.webp' },
+    { title: 'Deep Carpet Cleaning', description: 'Professional extraction and carpet care in action.', video: '/assets/work-carpet-extraction.mp4', poster: '/assets/work-carpet-extraction.webp' },
+    { title: 'Vehicle Upholstery Cleaning', description: 'Fabric seat cleaning with attention to detail.', video: '/assets/work-auto-upholstery.mp4', poster: '/assets/work-auto-upholstery.webp' },
+    { title: 'Sofa Deep Cleaning', description: 'Removing everyday buildup from upholstered furniture.', video: '/assets/work-sofa-cleaning.mp4', poster: '/assets/work-sofa-cleaning.webp' },
+    { title: 'Upholstery Extraction', description: 'A close-up of the deep cleaning process.', video: '/assets/work-upholstery-extraction.mp4', poster: '/assets/work-upholstery-extraction.webp' },
+    { title: 'Dining Chair Cleaning', description: 'Refreshing fabric seating with professional equipment.', video: '/assets/work-dining-chair.mp4', poster: '/assets/work-dining-chair.webp' }
   ],
   faq: [
     { question: 'How do I request an estimate?', answer: 'Fill out the short form on this website, text us, or message us on WhatsApp if available. Please describe the service and share photos if you can.' },

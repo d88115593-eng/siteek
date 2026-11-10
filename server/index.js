@@ -52,7 +52,7 @@ function auth(req,res,next) {
   try {
     const token = req.cookies.prime_session;
     const payload = jwt.verify(token, sessionSecret, { algorithms: ['HS256'] });
-    const admin = db.prepare('SELECT id,email,role FROM admins WHERE id=?').get(payload.sub);
+    const admin = db.prepare('SELECT id,username,role FROM admins WHERE id=?').get(payload.sub);
     if (!admin) throw new Error('Invalid session');
     req.admin = { ...admin, csrf: payload.csrf };
     return next();
@@ -67,19 +67,50 @@ function sendSession(res,user) {
   const csrfToken = crypto.randomBytes(24).toString('hex');
   const token = jwt.sign({ sub: user.id, csrf: csrfToken }, sessionSecret, { algorithm: 'HS256', expiresIn: '7d' });
   res.cookie('prime_session', token, { httpOnly: true, secure: production, sameSite: 'strict', maxAge: 7*86400000, path: '/' });
-  res.json({ email: user.email, role:user.role, csrfToken });
+  res.json({ username: user.username, role:user.role, csrfToken });
 }
 
 app.get('/api/health',(_req,res)=>res.json({ status:'ok' }));
 app.get('/api/public',(_req,res)=>{ res.setHeader('Cache-Control','no-store'); res.json(publicData()); });
+
+const getBrandImagePath=selected=>{
+  const value=String(selected||'');
+  if(!validMediaPath(value)||!value)return null;
+  const local=value.startsWith('/uploads/')?path.join(publicUploadDir,path.basename(value)):path.join(root,'public',value.slice(1));
+  return fs.existsSync(local)?local:null;
+};
+// Favicon is served as a real PNG, optimized for Google results, tabs and mobile browsers.
+// Updates in the dashboard are reflected here without code changes.
+app.get('/favicon.png',async(_req,res,next)=>{
+  try {
+    const brand=getSite();
+    const file=getBrandImagePath(brand.favicon)||getBrandImagePath(brand.logo);
+    if(!file)return res.status(404).end();
+    const output=await sharp(file).rotate().resize(96,96,{fit:'contain',background:'#ffffff'}).png().toBuffer();
+    res.setHeader('Cache-Control','public, max-age=3600');res.type('image/png').send(output);
+  }catch(error){next(error);}
+});
+// Sharing preview uses the original brand asset, not an invented stock photo.
+app.get('/social-preview.jpg',async(_req,res,next)=>{
+  try {
+    const site=getSite();
+    const file=getBrandImagePath(site.socialImage)||getBrandImagePath(site.logo);
+    if(!file)return res.status(404).end();
+    const brand=await sharp(file).rotate().resize(500,500,{fit:'contain',background:'#ffffff'}).jpeg({quality:88}).toBuffer();
+    const image=await sharp({create:{width:1200,height:630,channels:3,background:'#f4f9fd'}})
+      .composite([{input:brand,left:350,top:65}]).jpeg({quality:88}).toBuffer();
+    res.setHeader('Cache-Control','public,max-age=3600');res.type('image/jpeg').send(image);
+  }catch(error){next(error);}
+});
+
 app.post('/api/auth/login',loginLimiter,async(req,res)=>{
-  const email = safeString(req.body?.email,150).toLowerCase();
-  const password = String(req.body?.password??'').slice(0,512);
-  const admin = db.prepare('SELECT * FROM admins WHERE email=?').get(email);
-  if (!admin || !(await bcrypt.compare(password,admin.password_hash))) return res.status(401).json({ error:'Invalid email or password.' });
+  const username=safeString(req.body?.username,32).toLowerCase();
+  const password=String(req.body?.password??'').slice(0,512);
+  const admin=/^[a-z0-9._-]{3,32}$/.test(username)?db.prepare('SELECT * FROM admins WHERE username=?').get(username):null;
+  if(!admin || !(await bcrypt.compare(password,admin.password_hash)))return res.status(401).json({error:'Invalid username or password.'});
   sendSession(res,admin);
 });
-app.get('/api/auth/me',auth,(req,res)=>res.json({ email:req.admin.email,csrfToken:req.admin.csrf }));
+app.get('/api/auth/me',auth,(req,res)=>res.json({ username:req.admin.username,role:req.admin.role,csrfToken:req.admin.csrf }));
 app.post('/api/auth/logout',auth,csrf,(_req,res)=>{res.clearCookie('prime_session',{path:'/'});res.json({ok:true});});
 
 const upload = multer({
@@ -128,7 +159,7 @@ app.post('/api/quotes',quoteLimiter,upload.array('photos',3),async(req,res,next)
 app.get('/api/admin/bootstrap',auth,(req,res)=>{
   const leads=db.prepare('SELECT * FROM leads ORDER BY created_at DESC,id DESC LIMIT 500').all().map(l=>({...l,attachments:JSON.parse(l.attachments)}));
   res.setHeader('Cache-Control','no-store');
-  res.json({...publicData(), ...Object.fromEntries(itemTypes.map(t=>[t,getItems(t,true)])),leads,admin:{email:req.admin.email,role:req.admin.role}});
+  res.json({...publicData(), ...Object.fromEntries(itemTypes.map(t=>[t,getItems(t,true)])),leads,admin:{username:req.admin.username,role:req.admin.role}});
 });
 app.put('/api/admin/settings',auth,csrf,(req,res)=>{
   if (!req.body || typeof req.body!=='object' || Array.isArray(req.body)) return res.status(400).json({error:'Invalid settings.'});
@@ -141,7 +172,7 @@ app.put('/api/admin/settings',auth,csrf,(req,res)=>{
     } else if (typeof defaultSettings[key]==='boolean') patch[key]=!!value;
     else if (typeof value === 'string') {
       if (['primaryColor','deepColor','accentColor','surfaceColor'].includes(key) && !validColor(value)) continue;
-      if (['logo','heroPhoto','aboutPhoto'].includes(key) && !validMediaPath(value)) continue;
+      if (['logo','heroPhoto','aboutPhoto','favicon','socialImage'].includes(key) && !validMediaPath(value)) continue;
       if (['instagram','facebook'].includes(key) && !safeExternalUrl(value)) continue;
       if (['analyticsId','metaPixelId'].includes(key) && !/^[\w-]{0,40}$/.test(value)) continue;
       patch[key]=safeString(value,key.toLowerCase().includes('text') || key.toLowerCase().includes('description') ? 2500 : 500);
@@ -239,18 +270,18 @@ app.delete('/api/admin/leads/:id',auth,csrf,(req,res)=>{
   res.json({ok:true});
 });
 app.get('/api/admin/team',auth,owner,(_req,res)=>{
-  res.json(db.prepare('SELECT id,email,role,created_at FROM admins ORDER BY id').all());
+  res.json(db.prepare('SELECT id,username,role,created_at FROM admins ORDER BY id').all());
 });
 app.post('/api/admin/team',auth,owner,csrf,async(req,res)=>{
-  const email=safeString(req.body.email,150).toLowerCase();
+  const username=safeString(req.body.username,32).toLowerCase();
   const password=String(req.body.password||'');
   const role=['owner','editor'].includes(req.body.role)?req.body.role:'editor';
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<12) return res.status(400).json({error:'Use a valid email and a password of at least 12 characters.'});
+  if(!/^[a-z0-9._-]{3,32}$/.test(username)||password.length<12)return res.status(400).json({error:'Use a username (3–32 letters, digits, dots, dashes or underscores) and a password of at least 12 characters.'});
   try{
     const hash=await bcrypt.hash(password,12);
-    db.prepare('INSERT INTO admins(email,password_hash,role) VALUES(?,?,?)').run(email,hash,role);
+    db.prepare('INSERT INTO admins(username,password_hash,role) VALUES(?,?,?)').run(username,hash,role);
     res.status(201).json({ok:true});
-  }catch{return res.status(400).json({error:'This email is already in use.'});}
+  }catch{return res.status(400).json({error:'Username is already in use.'});}
 });
 app.delete('/api/admin/team/:id',auth,owner,csrf,(req,res)=>{
   const id=Number(req.params.id);
@@ -286,13 +317,13 @@ app.put('/api/admin/account',auth,csrf,async(req,res)=>{
   const admin=db.prepare('SELECT * FROM admins WHERE id=?').get(req.admin.id);
   if(!(await bcrypt.compare(String(req.body.currentPassword??'').slice(0,512),admin.password_hash))) return res.status(400).json({error:'Current password is incorrect.'});
   const newPassword=String(req.body.newPassword??'').slice(0,512);
-  const newEmail=safeString(req.body.email,150).toLowerCase();
+  const newUsername=safeString(req.body.username,32).toLowerCase();
   if(newPassword && newPassword.length<12) return res.status(400).json({error:'New password needs 12 or more characters.'});
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) return res.status(400).json({error:'Enter a valid email.'});
+  if(!/^[a-z0-9._-]{3,32}$/.test(newUsername)) return res.status(400).json({error:'Username must contain 3–32 letters, numbers, dots, dashes or underscores.'});
   try {
-    db.prepare('UPDATE admins SET email=?,password_hash=? WHERE id=?').run(newEmail,newPassword?await bcrypt.hash(newPassword,12):admin.password_hash,admin.id);
-  } catch { return res.status(400).json({error:'Email already in use.'}); }
-  sendSession(res,{id:admin.id,email:newEmail,role:admin.role});
+    db.prepare('UPDATE admins SET username=?,password_hash=? WHERE id=?').run(newUsername,newPassword?await bcrypt.hash(newPassword,12):admin.password_hash,admin.id);
+  } catch { return res.status(400).json({error:'Username already in use.'}); }
+  sendSession(res,{id:admin.id,username:newUsername,role:admin.role});
 });
 
 app.get('/robots.txt',(_req,res)=>res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n'));
@@ -317,7 +348,9 @@ if (fs.existsSync(path.join(root,'dist','index.html'))) {
       sameAs:[s.instagram,s.facebook].filter(Boolean)
     };
     const ld=JSON.stringify(jsonld).replace(/</g,'\\u003c');
-    const tags=`<meta property="og:type" content="website"/><meta property="og:title" content="${title}"/><meta property="og:description" content="${desc}"/>${origin?`<link rel="canonical" href="${htmlEscape(origin)}"/>`:''}<script type="application/ld+json">${ld}</script>`;
+    const base=origin||('https://'+req.get('host'));
+    const preview=htmlEscape(base+'/social-preview.jpg');
+    const tags=`<meta property="og:type" content="website"/><meta property="og:title" content="${title}"/><meta property="og:description" content="${desc}"/><meta property="og:image" content="${preview}"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="${preview}"/>${origin?`<link rel="canonical" href="${htmlEscape(origin)}"/>`:''}<script type="application/ld+json">${ld}</script>`;
     res.setHeader('Cache-Control','no-store');
     res.type('html').send(indexTemplate
       .replace(/<title>[^<]*<\/title>/,`<title>${title}</title>`)

@@ -329,7 +329,7 @@ if (fs.existsSync(path.join(root,'dist','index.html'))) {
 }
 app.use((err,_req,res,_next)=>{
   console.error('[server]',err.message);
-  if(err instanceof multer.MulterError) return res.status(400).json({error:err.code==='LIMIT_FILE_SIZE'?'Image must be smaller than 7 MB.':'Too many or invalid files.'});
+  if(err instanceof multer.MulterError) return res.status(400).json({error:err.code==='LIMIT_FILE_SIZE'?(_req.path==='/api/admin/upload-video'?'Video must be smaller than 40 MB.':'Image must be smaller than 7 MB.'):'Too many or invalid files.'});
   if(err?.message==='Only MP4 or WebM videos are accepted.') return res.status(400).json({error:err.message});
   if(err?.message==='Please upload JPG, PNG or WebP images only.') return res.status(400).json({error:err.message});
   if(err?.name==='Error' && /unsupported image|Input buffer contains unsupported/i.test(err.message)) return res.status(400).json({error:'Unsupported image file.'});

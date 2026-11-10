@@ -1,55 +1,62 @@
-# Como colocar a Prime Carpet & Home Care no GitHub
+# Prime Carpet & Home Care — GitHub e hospedagem
 
-O projeto já está estruturado como repositório Git. Você precisa criar um repositório vazio na sua própria conta GitHub e conectá-lo ao projeto.
+**Repositório publicado:** https://github.com/d88115593-eng/siteek
 
-## 1. Criar o repositório vazio
+O projeto já está no GitHub. Não é necessário criar outro repositório nem enviar o ZIP manualmente.
 
-Abra **https://github.com/new** e use:
+## Hospedar com Docker (servidor VPS)
 
-- Proprietário: `d88115593-eng` (a conta conectada ao ChatGPT)
-- Nome: `prime-carpet-home-care`
-- Visibilidade: **Private** (recomendado)
-- **Não marque** as opções de criar README, `.gitignore` ou licença (esses arquivos já estão neste projeto).
-
-Clique em **Create repository**.
-
-## 2. Subir o código pelo terminal
-
-Extraia o ZIP e abra o terminal na pasta `prime-carpet-home-care`. Se você estiver usando o pacote ZIP que contém a pasta `.git`, execute:
+1. Instale Docker e Docker Compose em um VPS Linux.
+2. No servidor, execute:
 
 ```bash
-git remote add origin https://github.com/d88115593-eng/prime-carpet-home-care.git
-git branch -M main
-git push -u origin main
+git clone https://github.com/d88115593-eng/siteek.git
+cd siteek
+cp .env.example .env
 ```
 
-No Windows, o Git pode abrir a autenticação do navegador. Se o repositório estiver em outra conta, substitua o proprietário na URL.
+3. Edite o arquivo `.env` no servidor, preenchendo, no mínimo:
 
-Se o ZIP não incluir `.git` após a extração, inicie um repositório local:
+- `SITE_URL` — domínio HTTPS real, por exemplo `https://seu-dominio.com`.
+- `ADMIN_EMAIL` — e-mail de login do dono.
+- `ADMIN_PASSWORD` — senha exclusiva e forte (pelo menos 12 caracteres).
+- `SESSION_SECRET` — sequência longa e aleatória com pelo menos 32 caracteres.
+- `NOTIFY_EMAIL`, `SMTP_*` e `FROM_EMAIL` — opcionais para notificações de novos orçamentos por e-mail.
+
+4. Inicie:
 
 ```bash
-git init -b main
-git add .
-git commit -m "Initial Prime Carpet website and admin dashboard"
-git remote add origin https://github.com/d88115593-eng/prime-carpet-home-care.git
-git push -u origin main
+docker compose up -d --build
 ```
 
-## 3. Hospedar o site
+5. Configure o DNS do domínio e um proxy reverso HTTPS (Caddy/Nginx), apontando para a porta `3001` do serviço. Configure o firewall do servidor. A aplicação precisa de HTTPS para o cookie administrativo seguro.
 
-**GitHub armazena o código-fonte, mas não hospeda este painel administrativo completo.** Escolha um VPS/host Node.js com armazenamento persistente ou Docker. O `README.md` tem os comandos de instalação e as variáveis `.env`.
+**Atenção:** GitHub Pages e hospedagens apenas estáticas não são suficientes para este projeto, pois o formulário, o banco de dados e o ADM dependem de um backend Node.js e armazenamento persistente.
 
-A configuração de domínio, HTTPS e credenciais deve ser feita na hospedagem. Não envie a senha administrativa no repositório.
+## Acesso ao painel ADM
 
-## 4. Acessar o ADM
+- Website: `https://seu-dominio.com/`
+- Administrativo: `https://seu-dominio.com/admin`
 
-Depois da implantação:
+A primeira conta é criada no primeiro início usando `ADMIN_EMAIL` / `ADMIN_PASSWORD` do ambiente do servidor. Troque a senha no próprio ADM, se necessário. Nunca coloque credenciais no repositório público.
 
-- Site: `https://seu-dominio.com/`
-- Painel administrativo: `https://seu-dominio.com/admin`
+## SMS — prioridade em Orlando
 
-O e-mail/senha de primeiro acesso são aqueles que **você configurar** em `ADMIN_EMAIL` e `ADMIN_PASSWORD` na hospedagem. O projeto não contém senha real nem credenciais prontas.
+O site já apresenta **Text Us for a Free Quote** como principal chamada para contato. O número inicial é **+1 (407) 456-6059**, mas deve ser confirmado com o proprietário. O link abre o aplicativo de SMS do visitante e não dispara mensagens automaticamente. Para configurar, entre em `Admin > Contact & SEO > SMS / US phone number`.
 
-## 5. SMS e WhatsApp
+O WhatsApp é opcional e só aparece depois que você preencher um número próprio no mesmo painel. Solicitações feitas pelo formulário são salvas em `Admin > Estimate Requests`. Notificações por SMS exigem integração separada com um provedor de mensagens.
 
-Entre em **Admin > Contact & SEO** e preencha os números. O WhatsApp foi deixado vazio por segurança até a confirmação do número real. O SMS já vem com o telefone comercial encontrado no cadastro público, mas confirme com o proprietário antes de publicar.
+## Personalizar o site
+
+No ADM, atualize cores, textos, logo, fotografias reais, serviços gerais, galerias de antes/depois, áreas atendidas, ofertas, avaliações autorizadas, horários, contatos e SEO. A logo original já está no repositório em `public/assets/prime-logo-original.jpg`.
+
+## Segurança e manutenção
+
+- Use HTTPS, senhas fortes e credenciais exclusivas para produção.
+- Faça backup do volume Docker `prime_data`, que contém banco SQLite e imagens enviadas.
+- Não execute múltiplas réplicas sem migrar banco e armazenamento para serviços compartilhados.
+- Revise a Política de Privacidade e os Termos antes de publicar para clientes na Flórida.
+- Confirme cidades, ZIP codes, horários e o prazo divulgado de resposta com a equipe.
+- Consulte os testes no GitHub em **Actions > Build and smoke tests**.
+
+Para detalhes técnicos adicionais, veja o `README.md` na raiz do repositório.

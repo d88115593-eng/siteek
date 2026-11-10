@@ -18,7 +18,7 @@ cp .env.example .env
 3. Edite o arquivo `.env` no servidor, preenchendo, no mínimo:
 
 - `SITE_URL` — domínio HTTPS real, por exemplo `https://seu-dominio.com`.
-- `ADMIN_USERNAME` — nome de usuário do administrador (exemplo: `admin`).
+- `ADMIN_USERNAME` — nome de usuário do administrador (exemplo: `eike`).
 - `ADMIN_PASSWORD` — senha exclusiva e forte (pelo menos 12 caracteres).
 - `SESSION_SECRET` — sequência longa e aleatória com pelo menos 32 caracteres.
 - `NOTIFY_EMAIL`, `SMTP_*` e `FROM_EMAIL` — opcionais para notificações de novos orçamentos por e-mail.
@@ -62,9 +62,9 @@ No ADM, atualize cores, textos, logo, fotografias reais, serviços gerais, galer
 Para detalhes técnicos adicionais, veja o `README.md` na raiz do repositório.
 ## Login por usuário e senha (sem e-mail)
 
-A página `/admin` possui campos **Username** e **Password**, sem e-mail. O usuário inicial é lido de `ADMIN_USERNAME` e a senha de `ADMIN_PASSWORD` somente na primeira inicialização com banco vazio. O padrão do nome é `admin` caso `ADMIN_USERNAME` esteja ausente.
+A página `/admin` possui campos **Username** e **Password**, sem e-mail. O usuário inicial é lido de `ADMIN_USERNAME` e a senha de `ADMIN_PASSWORD` somente na primeira inicialização com banco vazio. O padrão do nome é `eike` caso `ADMIN_USERNAME` esteja ausente.
 
-Instalações antigas com logins por e-mail são migradas automaticamente: o primeiro proprietário passa a usar **admin**, a senha criptografada é preservada e o acesso aos dados não é perdido. Outros usuários recebem usernames distintos. **Não publique senhas em repositórios GitHub públicos.**
+Instalações antigas com logins por e-mail são migradas automaticamente: o primeiro proprietário passa a usar **eike**, a senha criptografada é preservada e o acesso aos dados não é perdido. Outros usuários recebem usernames distintos. **Não publique senhas em repositórios GitHub públicos.**
 
 ## Ícone no Google e prévia de compartilhamento
 

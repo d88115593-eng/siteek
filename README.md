@@ -166,8 +166,8 @@ This project was prepared for the owner of Prime Carpet & Home Care. Brand asset
 ### Admin sign-in and upgrades
 
 - Use **Username + Password**, never email, at `/admin`.
-- First install: set `ADMIN_USERNAME` (defaults to `admin`) and secret `ADMIN_PASSWORD` of 12+ characters. Do not commit passwords to this repository.
-- When upgrading from the older email-login version, the SQLite DB automatically preserves existing administrator IDs and bcrypt password hashes while migrating to usernames; the first owner gets `admin`. After logging in, use **Account & Security** to change the username or password.
+- First install: set `ADMIN_USERNAME` (defaults to `eike`) and secret `ADMIN_PASSWORD` of 12+ characters. Do not commit passwords to this repository.
+- When upgrading from the older email-login version, the SQLite DB automatically preserves existing administrator IDs and bcrypt password hashes while migrating to usernames; the first owner gets `eike`. After logging in, use **Account & Security** to change the username or password.
 - Team accounts also use usernames without email.
 
 ### Real Results, videos and WhatsApp

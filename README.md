@@ -56,7 +56,7 @@ On a VPS with Docker and Docker Compose:
 
 ```bash
 cp .env.example .env
-# Edit .env: set SITE_URL, ADMIN_EMAIL, ADMIN_PASSWORD, SESSION_SECRET
+# Edit .env: set SITE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, SESSION_SECRET
 # Use the correct production domain, for example https://primecarpethome.com
 docker compose up -d --build
 ```

@@ -42,7 +42,8 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHe
 const quoteLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 20, standardHeaders: 'draft-7', legacyHeaders: false, message: { error: 'Too many submissions. Try again later.' } });
 const safeString = (v, limit=500) => String(v ?? '').trim().slice(0, limit);
 const validColor = v => /^#[0-9a-fA-F]{6}$/.test(v);
-const validMediaPath = v => !v || /^\/(?:assets|uploads)\/[\w.\-/]+$/.test(v);
+const validMediaPath = v => !v || /^\/(?:assets|uploads)\/[\w.-]+\.(?:jpg|jpeg|png|webp)$/i.test(v);
+const validVideoPath = v => !v || /^\/(?:assets|uploads)\/[\w.-]+\.(?:mp4|webm)$/i.test(v);
 const safeExternalUrl = v => !v || /^https:\/\/[^\s"'<>]+$/i.test(v);
 const allowedSections = new Set(defaultSettings.sections.map(s=>s.id));
 const allowedStatuses = ['New', 'Contacted', 'Quote Sent', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'];
@@ -155,7 +156,8 @@ function cleanItem(body) {
   for (const [k,v] of Object.entries(body)) {
     if (!/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/.test(k) || ['id','type','position','visible','created_at'].includes(k)) continue;
     if (typeof v==='string') {
-      if (['image','before','after'].includes(k) && !validMediaPath(v)) continue;
+      if (['image','before','after','poster'].includes(k) && !validMediaPath(v)) continue;
+      if (k==='video' && !validVideoPath(v)) continue;
       result[k]=safeString(v,['description','answer'].includes(k)?2400:500);
     } else if (typeof v==='boolean') result[k]=v;
   }
@@ -194,9 +196,22 @@ app.post('/api/admin/upload',auth,csrf,upload.single('image'),async(req,res,next
     return res.json({url:`/uploads/${filename}`});
   } catch(e){next(e);}
 });
+// Video uploads are opt-in and never used for private customer attachments.
+const videoUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:40*1024*1024,files:1},
+  fileFilter:(_req,file,cb)=>['video/mp4','video/webm'].includes(file.mimetype)?cb(null,true):cb(new Error('Only MP4 or WebM videos are accepted.'))});
+app.post('/api/admin/upload-video',auth,csrf,videoUpload.single('video'),(req,res)=>{
+  if(!req.file)return res.status(400).json({error:'Please select a video.'});
+  const buf=req.file.buffer;
+  const mp4=req.file.mimetype==='video/mp4' && buf.length>12 && buf.toString('ascii',4,8)==='ftyp';
+  const webm=req.file.mimetype==='video/webm' && buf.length>4 && buf.subarray(0,4).equals(Buffer.from([0x1a,0x45,0xdf,0xa3]));
+  if(!mp4&&!webm)return res.status(400).json({error:'Invalid video file format.'});
+  const filename=crypto.randomUUID()+(mp4?'.mp4':'.webm');
+  fs.writeFileSync(path.join(publicUploadDir,filename),buf,{flag:'wx'});
+  res.status(201).json({url:'/uploads/'+filename});
+});
 app.delete('/api/admin/uploads/:filename',auth,csrf,(req,res)=>{
   const filename=req.params.filename;
-  if (!/^[a-f0-9-]{36}\.webp$/.test(filename)) return res.status(400).json({error:'Invalid file.'});
+  if (!/^[a-f0-9-]{36}\.(?:webp|mp4|webm)$/.test(filename)) return res.status(400).json({error:'Invalid file.'});
   const content=[getSite(),...itemTypes.flatMap(type=>getItems(type,true))];
   if(content.some(row=>JSON.stringify(row).includes('/uploads/'+filename)))return res.status(409).json({error:'Remove this image from the website content before deleting it.'});
   fs.rmSync(path.join(publicUploadDir,filename),{force:true});res.json({ok:true});
@@ -246,8 +261,8 @@ app.delete('/api/admin/team/:id',auth,owner,csrf,(req,res)=>{
 app.get('/api/admin/media',auth,(_req,res)=>{
   const content=[getSite(),...itemTypes.flatMap(type=>getItems(type,true))];
   const used=(filename)=>content.some(row=>JSON.stringify(row).includes('/uploads/'+filename));
-  const files=fs.readdirSync(publicUploadDir).filter(f=>/^[a-f0-9-]{36}\.webp$/.test(f))
-    .map(filename=>{const stat=fs.statSync(path.join(publicUploadDir,filename));return { filename,url:'/uploads/'+filename,bytes:stat.size,createdAt:stat.birthtime.toISOString(),inUse:used(filename) };})
+  const files=fs.readdirSync(publicUploadDir).filter(f=>/^[a-f0-9-]{36}\.(?:webp|mp4|webm)$/.test(f))
+    .map(filename=>{const stat=fs.statSync(path.join(publicUploadDir,filename));return { filename,url:'/uploads/'+filename,bytes:stat.size,createdAt:stat.birthtime.toISOString(),inUse:used(filename),isVideo:/\.(?:mp4|webm)$/.test(filename) };})
     .sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   res.json(files);
 });
@@ -315,6 +330,7 @@ if (fs.existsSync(path.join(root,'dist','index.html'))) {
 app.use((err,_req,res,_next)=>{
   console.error('[server]',err.message);
   if(err instanceof multer.MulterError) return res.status(400).json({error:err.code==='LIMIT_FILE_SIZE'?'Image must be smaller than 7 MB.':'Too many or invalid files.'});
+  if(err?.message==='Only MP4 or WebM videos are accepted.') return res.status(400).json({error:err.message});
   if(err?.message==='Please upload JPG, PNG or WebP images only.') return res.status(400).json({error:err.message});
   if(err?.name==='Error' && /unsupported image|Input buffer contains unsupported/i.test(err.message)) return res.status(400).json({error:'Unsupported image file.'});
   res.status(500).json({error:'Something went wrong. Please try again.'});

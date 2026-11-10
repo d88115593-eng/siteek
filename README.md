@@ -177,3 +177,12 @@ The before-and-after examples are centered. Real job videos (if uploaded) displa
 ### Original Prime logo in browser and Google
 
 The admin's **Website & Branding** panel contains an editable favicon and social preview image. The backend serves `/favicon.png` (96×96 PNG from the unchanged original logo) and `/social-preview.jpg` (1200×630 sharing canvas). Google decides when a favicon appears in search results, after indexing the production HTTPS domain.
+
+## Primary owner: eike (username/password only)
+
+- The `/admin` page and all administrator/team APIs accept a **username** and a **password**; public visitors do **not** create admin accounts or enter an email.
+- The default primary username for a new installation is `eike`. Older accounts using the previously generated `admin` owner username are migrated to `eike` **without replacing their existing password hash**.
+- **No default password is embedded in GitHub**. Set a 12+ character `ADMIN_PASSWORD` through your hosting provider's **private environment variables**. A public repository must never contain private passwords.
+- For an existing database where the owner's password needs to be configured or reset, run `npm run admin:setup` **in the private server environment** after setting `ADMIN_USERNAME=eike` and `ADMIN_PASSWORD`. The command resets only the primary owner's credentials, preserving customer records and team accounts.
+- Afterwards, change credentials from **Admin → Account & Security**, and add more username-based admins under **Team Access**. Rotate `SESSION_SECRET` after a password reset if all prior sessions must be invalidated.
+- If an unrelated platform (such as a Lovable/Base44 authentication gate) redirects visitors to an **email registration form**, that platform-managed gate is **not** the GitHub project's `/admin` login. Configure the platform to route `/admin` to this project's custom login; do not remove access controls from admin APIs. Hosting this full-stack project requires its Node.js backend and persistent database.

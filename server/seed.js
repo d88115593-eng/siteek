@@ -56,7 +56,9 @@ export const defaultSettings = {
   galleryTitle: 'The difference is in the details.',
   gallerySubtitle: 'A look at our work. Real progress, one space at a time.',
   videosTitle: 'See our team at work.',
-  videosSubtitle: 'Real footage of carpet, sofa, car seat and upholstery cleaning. Press play to see the process.'
+  videosSubtitle: 'Real footage of carpet, sofa, car seat and upholstery cleaning. Press play to see the process.',
+  favicon: '/assets/prime-logo-original.jpg',
+  socialImage: '/assets/prime-logo-original.jpg',
   aboutTitle: 'Your home is in good hands.',
   aboutText: 'Prime Carpet & Home Care is focused on treating every space with care and attention to detail. From deep upholstery cleaning to general home service requests, we listen first and help you find the right solution.',
   aboutPhoto: '/assets/prime-chair-before-after.webp',

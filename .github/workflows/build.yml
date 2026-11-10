@@ -18,7 +18,7 @@ jobs:
         run: npm run check
       - name: Test live backend, leads and admin authentication
         env:
-          ADMIN_EMAIL: test-admin@example.invalid
+          ADMIN_USERNAME: testadmin
           ADMIN_PASSWORD: ci-test-admin-password-very-long-123
           SESSION_SECRET: ci-session-secret-very-long-and-random-local-test-value
           DATA_DIR: ${{ runner.temp }}/prime-smoke-data

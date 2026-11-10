@@ -86,7 +86,10 @@ app.get('/favicon.png',async(_req,res,next)=>{
     const brand=getSite();
     const file=getBrandImagePath(brand.favicon)||getBrandImagePath(brand.logo);
     if(!file)return res.status(404).end();
-    const output=await sharp(file).rotate().resize(96,96,{fit:'contain',background:'#ffffff'}).png().toBuffer();
+    const useCircularMask=(brand.favicon||brand.logo||'').endsWith('/prime-logo-original.jpg');
+    const input=sharp(file).rotate().resize(96,96,{fit:'contain',background:'#ffffff'});
+    const mask=Buffer.from('<svg width="96" height="96" xmlns="http://www.w3.org/2000/svg"><circle cx="48" cy="48" r="47.5" fill="white"/></svg>');
+    const output=await (useCircularMask?input.ensureAlpha().composite([{input:mask,blend:'dest-in'}]):input).png().toBuffer();
     res.setHeader('Cache-Control','public, max-age=3600');res.type('image/png').send(output);
   }catch(error){next(error);}
 });

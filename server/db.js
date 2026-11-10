@@ -69,7 +69,13 @@ if (!numAdmins && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && proce
 
 export function getSite() {
   const raw = db.prepare('SELECT data FROM settings WHERE key=?').get('site');
-  return raw ? JSON.parse(raw.data) : defaultSettings;
+  if (!raw) return defaultSettings;
+  const saved=JSON.parse(raw.data);
+  // One-time defaults for existing installations, retaining later admin overrides.
+  if (!Object.hasOwn(saved,'videosTitle') && !saved.whatsapp) saved.whatsapp=defaultSettings.whatsapp;
+  const sections=Array.isArray(saved.sections)?[...saved.sections]:[...defaultSettings.sections];
+  for(const section of defaultSettings.sections){if(!sections.some(s=>s.id===section.id)){const idx=sections.findIndex(s=>s.id==='gallery');sections.splice(idx<0?sections.length:idx+1,0,section);}}
+  return {...defaultSettings,...saved,sections};
 }
 export function updateSite(patch) {
   const current = getSite();
@@ -77,12 +83,19 @@ export function updateSite(patch) {
   db.prepare('UPDATE settings SET data=? WHERE key=?').run(JSON.stringify(result), 'site');
   return result;
 }
-export const itemTypes = ['services','gallery','faq','areas','reviews','offers'];
+export const itemTypes = ['services','gallery','videos','faq','areas','reviews','offers'];
 export function getItems(type, includeHidden = false) {
   if (!itemTypes.includes(type)) return [];
   const rows = db.prepare(`SELECT * FROM content_items WHERE type=? ${includeHidden ? '' : 'AND visible=1'} ORDER BY position,id`).all(type);
   return rows.map(({ data, visible, ...row })=>({ ...row, ...JSON.parse(data), visible: Boolean(visible) }));
 }
 export function publicData() {
-  return { site: getSite(), ...Object.fromEntries(itemTypes.map(t=>[t,getItems(t)])) };
+  const collections=Object.fromEntries(itemTypes.map(t=>[t,getItems(t)]));
+  // Hide demo videos missing from a source-only checkout until media is uploaded.
+  collections.videos=collections.videos.filter(item=>{
+    if(!/^\/(?:assets|uploads)\/[\w.-]+\.(?:mp4|webm)$/.test(item.video||''))return false;
+    const file=item.video.startsWith('/uploads/')?path.join(publicUploadDir,path.basename(item.video)):path.resolve(process.cwd(),'public',item.video.slice(1));
+    return fs.existsSync(file);
+  });
+  return {site:getSite(),...collections};
 }
